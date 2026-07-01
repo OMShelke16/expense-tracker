@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ExpenseTracker{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+{% if current_user.is_authenticated %}
+<nav class="app-navbar">
+  <div class="container">
+    <a class="nav-brand" href="{{ url_for('dashboard') }}">
+      <i class="bi bi-wallet2"></i> ExpenseTracker
+    </a>
+
+    <div class="nav-links">
+      <a href="{{ url_for('dashboard') }}"    class="nav-link-item {% if request.endpoint=='dashboard' %}active{% endif %}"><i class="bi bi-grid-1x2"></i> Dashboard</a>
+      <a href="{{ url_for('expenses_list') }}" class="nav-link-item {% if request.endpoint=='expenses_list' %}active{% endif %}"><i class="bi bi-list-ul"></i> Expenses</a>
+      <a href="{{ url_for('add_expense') }}"  class="nav-link-item {% if request.endpoint=='add_expense' %}active{% endif %}"><i class="bi bi-plus-circle"></i> Add</a>
+      <a href="{{ url_for('budgets') }}"       class="nav-link-item {% if request.endpoint=='budgets' %}active{% endif %}"><i class="bi bi-piggy-bank"></i> Budgets</a>
+    </div>
+
+    <div class="nav-right">
+      <button class="dark-toggle" id="darkToggle" title="Toggle dark mode"><i class="bi bi-moon-stars"></i></button>
+      <span class="nav-user"><i class="bi bi-person-circle"></i> {{ current_user.username }}</span>
+      <a class="btn-logout" href="{{ url_for('logout') }}">Logout</a>
+      <button class="nav-toggle" id="navToggle"><i class="bi bi-list"></i></button>
+    </div>
+  </div>
+</nav>
+
+<div class="nav-mobile" id="navMobile">
+  <a href="{{ url_for('dashboard') }}"    class="nav-link-item"><i class="bi bi-grid-1x2"></i> Dashboard</a>
+  <a href="{{ url_for('expenses_list') }}" class="nav-link-item"><i class="bi bi-list-ul"></i> Expenses</a>
+  <a href="{{ url_for('add_expense') }}"  class="nav-link-item"><i class="bi bi-plus-circle"></i> Add Expense</a>
+  <a href="{{ url_for('budgets') }}"       class="nav-link-item"><i class="bi bi-piggy-bank"></i> Budgets &amp; Savings</a>
+  <div style="border-top:1px solid rgba(255,255,255,.15);margin:.5rem 0;padding-top:.5rem;display:flex;align-items:center;justify-content:space-between;">
+    <span class="nav-user"><i class="bi bi-person-circle"></i> {{ current_user.username }}</span>
+    <a class="btn-logout" href="{{ url_for('logout') }}">Logout</a>
+  </div>
+</div>
+{% endif %}
+
+<div class="container page">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">
+        <i class="bi bi-{% if category=='success' %}check-circle{% elif category=='danger' %}exclamation-circle{% elif category=='warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+        <span>{{ message }}</span>
+        <button class="alert-close" onclick="this.parentElement.remove()">&#x2715;</button>
+      </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<script>
+  // Dark mode
+  const root = document.documentElement;
+  const darkBtn = document.getElementById('darkToggle');
+  const saved = localStorage.getItem('theme') || 'light';
+  root.setAttribute('data-theme', saved);
+  if (darkBtn) {
+    darkBtn.innerHTML = saved === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
+    darkBtn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      darkBtn.innerHTML = next === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
+    });
+  }
+  // Mobile nav
+  const navToggle = document.getElementById('navToggle');
+  const navMobile = document.getElementById('navMobile');
+  if (navToggle) navToggle.addEventListener('click', () => navMobile.classList.toggle('open'));
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

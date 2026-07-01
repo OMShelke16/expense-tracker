@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · ExpenseTracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title"><i class="bi bi-grid-1x2" style="color:var(--brand)"></i> Dashboard</h1>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+    <div class="export-bar">
+      <a href="{{ url_for('export_csv') }}" class="btn btn-outline btn-sm"><i class="bi bi-filetype-csv"></i> CSV</a>
+      <a href="{{ url_for('export_pdf') }}" class="btn btn-outline btn-sm"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+    </div>
+    <a href="{{ url_for('add_expense') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Expense</a>
+  </div>
+</div>
+
+<!-- STAT CARDS -->
+<div class="stat-grid" style="margin-bottom:1.25rem;">
+  <div class="stat-card">
+    <div class="stat-icon"><i class="bi bi-currency-rupee"></i></div>
+    <div class="stat-label">Total Spent</div>
+    <div class="stat-value">₹{{ "{:,.0f}".format(total) }}</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-icon"><i class="bi bi-calendar-month"></i></div>
+    <div class="stat-label">This Month</div>
+    <div class="stat-value">₹{{ "{:,.0f}".format(this_month_total) }}</div>
+  </div>
+  <div class="stat-card orange">
+    <div class="stat-icon"><i class="bi bi-piggy-bank"></i></div>
+    <div class="stat-label">Total Saved</div>
+    <div class="stat-value">₹{{ "{:,.0f}".format(total_savings) }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i class="bi bi-receipt"></i></div>
+    <div class="stat-label">Entries</div>
+    <div class="stat-value">{{ expense_count }}</div>
+  </div>
+  {% if yearly_count > 0 %}
+  <div class="stat-card red">
+    <div class="stat-icon"><i class="bi bi-calendar-year"></i></div>
+    <div class="stat-label">Yearly Expenses</div>
+    <div class="stat-value">{{ yearly_count }} &nbsp;<span style="font-size:.9rem;color:var(--text-muted)">(₹{{ "{:,.0f}".format(yearly_total) }})</span></div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- CHARTS ROW -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
+  <div class="card">
+    <div class="card-body">
+      <div class="card-title">Spending by Category</div>
+      {% if categories %}
+      <div class="chart-box"><canvas id="catChart"></canvas></div>
+      {% else %}
+      <div class="empty-state"><i class="bi bi-pie-chart"></i><p>No data yet</p></div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="card-title">Last 6 Months</div>
+      <div class="chart-box"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- BUDGET PROGRESS (current month) -->
+{% if budget_progress %}
+<div class="card" style="margin-bottom:1.25rem;">
+  <div class="card-body">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div class="card-title" style="margin-bottom:0;">Budget Progress — This Month</div>
+      <a href="{{ url_for('budgets') }}" class="btn btn-outline btn-sm"><i class="bi bi-gear"></i> Manage</a>
+    </div>
+    <div class="budget-grid">
+      {% for b in budget_progress %}
+      <div class="budget-card {% if b.over %}over-budget{% endif %}">
+        <div class="budget-cat">
+          <i class="bi bi-tag" style="color:var(--brand)"></i> {{ b.category }}
+          {% if b.over %}<span class="badge badge-over" style="float:right">Over!</span>{% endif %}
+        </div>
+        <div class="budget-nums">
+          <span>Budget: <strong>₹{{ "{:,.0f}".format(b.budget) }}</strong></span>
+          <span class="spent-val">Spent: ₹{{ "{:,.0f}".format(b.spent) }}</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill {% if b.over %}over{% elif b.pct > 80 %}warn{% endif %}"
+               style="width:{{ b.pct }}%"></div>
+        </div>
+        <div style="font-size:.75rem;color:var(--text-muted);margin-top:.4rem;">{{ b.pct }}% used</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- RECENT EXPENSES TABLE -->
+<div class="card">
+  <div class="card-body">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
+      <div class="card-title" style="margin-bottom:0;">Recent Expenses</div>
+      <a href="{{ url_for('expenses_list') }}" class="btn btn-outline btn-sm">View all</a>
+    </div>
+    {% if expenses %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th><th>Category</th><th>Type</th>
+            <th class="hide-mobile">Date</th><th class="td-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in expenses %}
+          <tr>
+            <td><strong>{{ e.title }}</strong></td>
+            <td><span class="badge badge-cat">{{ e.category }}</span></td>
+            <td>{% if e.expense_type=='yearly' %}<span class="badge badge-yearly"><i class="bi bi-calendar-year"></i> Yearly</span>{% else %}<span style="font-size:.8rem;color:var(--text-muted)">Regular</span>{% endif %}</td>
+            <td class="hide-mobile" style="color:var(--text-muted);font-size:.85rem;">{{ e.date.strftime('%d %b %Y') }}</td>
+            <td class="td-right"><strong>₹{{ "{:,.2f}".format(e.amount) }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-inbox"></i>
+      <p>No expenses recorded yet.</p>
+      <a href="{{ url_for('add_expense') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add your first</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
+const gridColor = () => isDark() ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)';
+const textColor = () => isDark() ? '#8b90a8' : '#6b7280';
+
+const PALETTE = ['#6366f1','#22c55e','#f59e0b','#ef4444','#06b6d4','#a855f7','#ec4899','#14b8a6','#eab308','#64748b','#f97316'];
+
+{% if categories %}
+const catChart = new Chart(document.getElementById('catChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ categories|tojson }},
+    datasets: [{ data: {{ category_totals|tojson }}, backgroundColor: PALETTE, borderWidth: 2, borderColor: 'transparent' }]
+  },
+  options: {
+    cutout: '65%',
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, color: textColor(), padding: 10, boxWidth: 12 } } }
+  }
+});
+{% endif %}
+
+const trendChart = new Chart(document.getElementById('trendChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ months|tojson }},
+    datasets: [{ label: 'Spent (₹)', data: {{ monthly_totals|tojson }}, backgroundColor: '#6366f1', borderRadius: 6, borderSkipped: false }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: textColor() } },
+      y: { beginAtZero: true, grid: { color: gridColor() }, ticks: { color: textColor() } }
+    }
+  }
+});
+</script>
+{% endblock %}

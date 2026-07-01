@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Add Expense · ExpenseTracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title"><i class="bi bi-plus-circle" style="color:var(--brand)"></i> Add Expense</h1>
+  <a href="{{ url_for('expenses_list') }}" class="btn btn-outline btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div style="max-width:600px;margin:0 auto;">
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" id="expenseForm">
+
+        <div class="form-group">
+          <label class="form-label">Title</label>
+          <input type="text" name="title" class="form-control" placeholder="e.g. Grocery shopping, Netflix, Car insurance…" required autofocus>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <input type="number" step="0.01" min="0.01" name="amount" class="form-control" placeholder="0.00" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" class="form-control" value="{{ today }}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select name="category" class="form-select">
+            {% for c in categories %}
+            <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Yearly toggle -->
+        <div class="form-group">
+          <label class="form-label">Expense Type</label>
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label"><i class="bi bi-calendar-year"></i> Yearly Expense</div>
+              <div class="toggle-desc" id="yearlyDesc">One-time payment that covers a full year (e.g. insurance, subscriptions). We'll spread it monthly for budgeting.</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" name="is_yearly" id="yearlyToggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Yearly banner -->
+        <div class="yearly-banner" id="yearlyBanner" style="display:none;margin-bottom:1rem;">
+          <i class="bi bi-info-circle-fill"></i>
+          <span>This expense will count as <strong>₹<span id="monthlyEq">0</span>/month</strong> amortized over 12 months. It will appear in your budget tracking for the next 12 months.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Note <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+          <textarea name="note" class="form-control" placeholder="Any extra details…"></textarea>
+        </div>
+
+        <div style="display:flex;gap:.75rem;margin-top:.5rem;">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save Expense</button>
+          <a href="{{ url_for('expenses_list') }}" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const toggle = document.getElementById('yearlyToggle');
+const banner = document.getElementById('yearlyBanner');
+const amtInput = document.querySelector('input[name="amount"]');
+const eq = document.getElementById('monthlyEq');
+
+function updateBanner() {
+  if (toggle.checked) {
+    banner.style.display = 'flex';
+    const val = parseFloat(amtInput.value) || 0;
+    eq.textContent = (val / 12).toFixed(2);
+  } else {
+    banner.style.display = 'none';
+  }
+}
+toggle.addEventListener('change', updateBanner);
+amtInput.addEventListener('input', updateBanner);
+</script>
+{% endblock %}

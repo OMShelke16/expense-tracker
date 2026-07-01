@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Expenses · ExpenseTracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title"><i class="bi bi-list-ul" style="color:var(--brand)"></i> All Expenses</h1>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+    <a href="{{ url_for('export_csv') }}" class="btn btn-outline btn-sm"><i class="bi bi-filetype-csv"></i> CSV</a>
+    <a href="{{ url_for('export_pdf') }}" class="btn btn-outline btn-sm"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+    <a href="{{ url_for('add_expense') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add</a>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <a href="{{ url_for('expenses_list') }}" class="filter-chip {% if not active_category and not active_type %}active{% endif %}">All</a>
+  <a href="{{ url_for('expenses_list', type='yearly') }}" class="filter-chip {% if active_type=='yearly' %}active{% endif %}"><i class="bi bi-calendar-year"></i> Yearly</a>
+  {% for c in categories %}
+  <a href="{{ url_for('expenses_list', category=c) }}" class="filter-chip {% if active_category==c %}active{% endif %}">{{ c }}</a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="card-body" style="padding:0;">
+    {% if expenses %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th><th>Category</th><th>Type</th>
+            <th class="hide-mobile">Date</th>
+            <th class="hide-mobile">Note</th>
+            <th class="td-right">Amount</th>
+            <th class="td-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in expenses %}
+          <tr>
+            <td><strong>{{ e.title }}</strong></td>
+            <td><span class="badge badge-cat">{{ e.category }}</span></td>
+            <td>
+              {% if e.expense_type=='yearly' %}
+                <span class="badge badge-yearly"><i class="bi bi-calendar-year"></i> Yearly</span>
+                <div style="font-size:.72rem;color:var(--text-muted);">≈₹{{ "{:,.0f}".format(e.monthly_equivalent) }}/mo</div>
+              {% else %}
+                <span style="font-size:.8rem;color:var(--text-muted)">Regular</span>
+              {% endif %}
+            </td>
+            <td class="hide-mobile" style="color:var(--text-muted);font-size:.85rem;">{{ e.date.strftime('%d %b %Y') }}</td>
+            <td class="hide-mobile" style="color:var(--text-muted);font-size:.82rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.note or '—' }}</td>
+            <td class="td-right"><strong>₹{{ "{:,.2f}".format(e.amount) }}</strong></td>
+            <td>
+              <div class="td-actions">
+                <a href="{{ url_for('edit_expense', eid=e.id) }}" class="btn btn-outline btn-icon btn-sm" title="Edit"><i class="bi bi-pencil"></i></a>
+                <form action="{{ url_for('delete_expense', eid=e.id) }}" method="POST" style="display:inline"
+                      onsubmit="return confirm('Delete this expense?');">
+                  <button type="submit" class="btn btn-danger-outline btn-icon btn-sm" title="Delete"><i class="bi bi-trash"></i></button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div style="padding:1rem;">
+      <div class="pagination">
+        {% if pagination.has_prev %}
+        <a class="page-btn" href="{{ url_for('expenses_list', page=pagination.prev_num, category=active_category, type=active_type) }}"><i class="bi bi-chevron-left"></i></a>
+        {% endif %}
+        {% for p in range(1, pagination.pages+1) %}
+          {% if p == pagination.page %}
+          <span class="page-btn active">{{ p }}</span>
+          {% elif p == 1 or p == pagination.pages or (p >= pagination.page-2 and p <= pagination.page+2) %}
+          <a class="page-btn" href="{{ url_for('expenses_list', page=p, category=active_category, type=active_type) }}">{{ p }}</a>
+          {% elif p == 2 or p == pagination.pages-1 %}
+          <span class="page-btn" style="border:none;cursor:default;">…</span>
+          {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+        <a class="page-btn" href="{{ url_for('expenses_list', page=pagination.next_num, category=active_category, type=active_type) }}"><i class="bi bi-chevron-right"></i></a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-inbox"></i>
+      <p>No expenses found{% if active_category %} in <strong>{{ active_category }}</strong>{% elif active_type=='yearly' %} of type <strong>Yearly</strong>{% endif %}.</p>
+      <a href="{{ url_for('add_expense') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add one</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Budgets · ExpenseTracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title"><i class="bi bi-piggy-bank" style="color:var(--brand)"></i> Budgets &amp; Savings</h1>
+  <div class="month-nav">
+    <a href="{{ url_for('budgets', year=prev_year, month=prev_month) }}" title="Previous month"><i class="bi bi-chevron-left"></i></a>
+    <span>{{ month_name }} {{ year }}</span>
+    <a href="{{ url_for('budgets', year=next_year, month=next_month) }}" title="Next month"><i class="bi bi-chevron-right"></i></a>
+  </div>
+</div>
+
+<!-- SAVINGS HERO -->
+<div class="card" style="margin-bottom:1.25rem;background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);border:none;">
+  <div class="card-body" style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+    <div style="font-size:2.5rem;"><i class="bi bi-piggy-bank" style="color:rgba(255,255,255,.7)"></i></div>
+    <div>
+      <div style="color:rgba(255,255,255,.75);font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Total Lifetime Savings</div>
+      <div style="color:#fff;font-size:2rem;font-weight:700;letter-spacing:-.5px;">₹{{ "{:,.2f}".format(total_savings) }}</div>
+      <div style="color:rgba(255,255,255,.7);font-size:.82rem;margin-top:.2rem;">Money left over when you stayed under budget in past months</div>
+    </div>
+  </div>
+</div>
+
+<!-- SET BUDGETS FORM -->
+<div class="card" style="margin-bottom:1.25rem;">
+  <div class="card-body">
+    <div class="card-title">
+      Set Budgets for {{ month_name }} {{ year }}
+      {% if is_current %}<span class="badge badge-ok" style="margin-left:.5rem;font-size:.72rem;">Current Month</span>{% endif %}
+    </div>
+    <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1rem;">
+      Enter a monthly budget limit for each category. Leave blank to skip. 
+      Unspent budget from past months is automatically banked as savings.
+    </p>
+    <form method="POST" action="{{ url_for('budgets', year=year, month=month) }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.75rem;margin-bottom:1.1rem;">
+        {% for row in rows %}
+        <div style="display:flex;flex-direction:column;gap:.3rem;">
+          <label class="form-label" style="margin-bottom:0;">
+            <i class="bi bi-tag" style="color:var(--brand);margin-right:.25rem;"></i>{{ row.category }}
+            {% if row.spent > 0 %}<span style="font-size:.75rem;color:var(--text-muted);font-weight:400;"> (spent ₹{{ "{:,.0f}".format(row.spent) }})</span>{% endif %}
+          </label>
+          <input type="number" step="0.01" min="0" name="budget_{{ row.category }}"
+                 class="form-control" style="font-size:.88rem;"
+                 placeholder="No limit"
+                 value="{{ row.budget if row.budget > 0 else '' }}">
+        </div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save Budgets</button>
+    </form>
+  </div>
+</div>
+
+<!-- PROGRESS CARDS -->
+{% set active_rows = rows | selectattr('budget','gt',0) | list %}
+{% if active_rows %}
+<div class="card" style="margin-bottom:1.25rem;">
+  <div class="card-body">
+    <div class="card-title">Budget Progress — {{ month_name }} {{ year }}</div>
+    <div class="budget-grid">
+      {% for row in active_rows %}
+      <div class="budget-card {% if row.over %}over-budget{% endif %}">
+        <div class="budget-cat">
+          <i class="bi bi-tag" style="color:var(--brand)"></i> {{ row.category }}
+          {% if row.over %}
+            <span class="badge badge-over" style="float:right">Over!</span>
+          {% elif not is_current and row.remaining > 0 %}
+            <span class="badge badge-ok" style="float:right">Saved ₹{{ "{:,.0f}".format(row.remaining) }}</span>
+          {% endif %}
+        </div>
+        <div class="budget-nums">
+          <span>Budget: <strong>₹{{ "{:,.0f}".format(row.budget) }}</strong></span>
+          <span class="spent-val">Spent: ₹{{ "{:,.0f}".format(row.spent) }}</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill {% if row.over %}over{% elif row.pct > 80 %}warn{% endif %}"
+               style="width:{{ row.pct }}%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-muted);margin-top:.4rem;">
+          <span>{{ row.pct }}% used</span>
+          {% if row.over %}
+            <span style="color:var(--danger);font-weight:600;">₹{{ "{:,.0f}".format(row.spent - row.budget) }} over</span>
+          {% else %}
+            <span style="color:var(--success);font-weight:600;">₹{{ "{:,.0f}".format(row.remaining) }} left</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- SAVINGS HISTORY -->
+{% if recent_savings %}
+<div class="card">
+  <div class="card-body">
+    <div class="card-title">Savings History</div>
+    <p style="color:var(--text-muted);font-size:.83rem;margin-bottom:1rem;">
+      These are settled savings from past months where you came in under budget.
+    </p>
+    {% for s in recent_savings %}
+    <div class="saving-row">
+      <div class="saving-month">{{ ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][s.month] }} {{ s.year }}</div>
+      <div class="saving-cat"><span class="badge badge-cat">{{ s.category }}</span></div>
+      <div style="font-size:.8rem;color:var(--text-muted);">Budget ₹{{ "{:,.0f}".format(s.budget_amount) }} · Spent ₹{{ "{:,.0f}".format(s.spent_amount) }}</div>
+      <div class="saving-amt">+₹{{ "{:,.2f}".format(s.saved_amount) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
